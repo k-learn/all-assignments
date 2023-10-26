@@ -17,6 +17,115 @@
   - `npm run test-calculator`
 */
 
-class Calculator {}
+class Calculator {
+    
+    constructor() {
+        this.result = 0;
+    }
+
+    add(num) {
+        this.result += num;
+    }
+
+    subtract(num) {
+        this.result -= num;
+    }
+
+    multiply(num) {
+        this.result *= num;
+    }
+
+    divide(num) {
+        if (num === 0) {
+            throw new Error("Zero division Error");
+        }
+        this.result /= num;
+    }
+
+    clear() {
+        this.result = 0;
+    }
+
+    getResult() {
+        return this.result;
+    }
+
+    atomicExpression(expr) {
+        const operations = ["+", "-", "*", "/"];
+        const operation = expr.split(/\d+\.?/g).join("");
+        if (!operations.includes(operation)) {
+            throw new Error("Invalid operation");
+        }
+
+        let numArr = expr.split(/[\+\-\*\/]/g);
+        switch (operation) {
+            case "+":
+                return String(Number(numArr[0]) + Number(numArr[1]));
+            case "-":
+                return String(Number(numArr[0]) - Number(numArr[1]));
+            case "*":
+                return String(Number(numArr[0]) * Number(numArr[1]));
+            case "/":
+                return String(Number(numArr[0]) / Number(numArr[1]));
+        }
+    }
+
+    simpleExpression(expr) {
+        expr = expr.split(" ").join("");
+        if (expr.match(/[^\+\-\*\/\d\.]/g)) {
+            throw new Error("Invalid expression");
+        }
+        if (expr.split(/[^\d]/g).includes("")) {
+            throw new Error("Invalid expression");
+        }
+
+        while (expr.match(/\d+\.?\d*/g).length > 1) {
+            if (expr.match(/\//g)) {
+                const re = /\d+\.?\d*\/\d+\.?\d*/;
+                expr = expr.replace(re, this.atomicExpression(expr.match(re)[0]));
+                continue;
+            }
+            if (expr.match(/\*/g)) {
+                const re = /\d+\.?\d*\*\d+\.?\d*/;
+                expr = expr.replace(re, this.atomicExpression(expr.match(re)[0]));
+                continue;
+            }
+            if (expr.match(/\+/g)) {
+                const re = /\d+\.?\d*\+\d+\.?\d*/;
+                expr = expr.replace(re, this.atomicExpression(expr.match(re)[0]));
+                continue;
+            }
+            if (expr.match(/\-/g)) {
+                const re = /\d+\.?\d*\-\d+\.?\d*/;
+                expr = expr.replace(re, this.atomicExpression(expr.match(re)[0]));
+                continue;
+            }
+        }
+        
+        return expr.match(/\d+\.?\d*/g)[0];
+    }
+
+    expressionWithBraces(expr) {
+        expr = expr.split(" ").join("");
+        if (!expr.match(/[\(\)]/g)) {
+            return this.simpleExpression(expr);
+        }
+
+        while (expr.match(/\d+\.?\d*/g).length > 1) {
+            if (expr.match(/\(([^()]+)\)/)) {
+                expr = expr.replace("("+expr.match(/\(([^()]+)\)/)[1]+")", this.expressionWithBraces(expr.match(/\(([^()]+)\)/)[1]));
+            }
+            expr = this.expressionWithBraces(expr);
+        }
+
+        return expr.match(/\d+\.?\d*/g)[0];
+    }
+
+    calculate(expr) {
+        this.result = Number(this.expressionWithBraces(expr));
+        return this.expressionWithBraces(expr); 
+    }
+
+}
 
 module.exports = Calculator;
