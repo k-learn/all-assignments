@@ -41,9 +41,137 @@
  */
 const express = require('express');
 const bodyParser = require('body-parser');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+// const PORT = 3000;
 
 const app = express();
 
 app.use(bodyParser.json());
+
+const readFile = () => new Promise((resolve, reject) => {
+    fs.readFile("./todos.json", "utf8", (err, data) => {
+        if (err) reject(err);
+        try {
+            resolve(JSON.parse(data));
+        } catch (parseErr) {
+            reject(parseErr);
+        }
+    });
+});
+
+const getTodo = (id) => new Promise((resolve, reject) => {
+    readFile().then(data => {
+        for (let i = 0; i < data.length; ++i) {
+            if (data[i].id === id) {
+                resolve(data[i]);
+            }
+        }
+        reject(`No such todo with ${id}`);
+    });
+});
+
+const removeTodo = (id) => new Promise((resolve, reject) => {
+    readFile().then(todos => {
+        let found = false;
+        for (let i = 0; i < todos.length; ++i) {
+            if (todos[i].id === id) {
+                todos.splice(i, 1);
+                found = true;
+            }
+        }
+        if (found) {
+            writeFile(todos);
+            resolve(`Todo with ${id} removed successfully`);
+        }
+        reject(`No such todo with ${id}`);
+    })
+})
+
+const updateTodo = (id, newTodo) => new Promise((resolve, reject) => {
+    readFile().then(todos => {
+        let found = false;
+        for (let i = 0; i < todos.length; ++i) {
+            if (todos[i].id === id) {
+                console.log(newTodo);
+                todos[i] = { 
+                    ...todos[i],
+                    ...newTodo,
+                    ...(newTodo.title === undefined ? { title: todos[i].title } : {}),
+                    ...(newTodo.description === undefined ? { description: todos[i].description } : {}),
+                    ...(newTodo.completed === undefined ? { completed: todos[i].completed } : {}) 
+                };
+                console.log(todos[i]);
+                found = true;
+            }
+        }
+        if (found) {
+            writeFile(todos);
+            resolve(`Todo with ${id} updated successfully`);
+        }
+        reject("No such todo with given id");
+    }).catch(err => reject(err))
+});
+
+const writeFile = (todos) => {
+    fs.writeFile("./todos.json", JSON.stringify(todos), "utf8", err => {
+        if (err) throw err;
+        console.log(`${todos} are written succesfully`);
+    })
+}
+
+
+app.get("/todos", (_, res) => {
+    readFile().then(data => {
+        return res.status(200).send(data);
+    })
+});
+
+app.get("/todos/:id", (req, res) => {
+    const id = req.params.id;
+    getTodo(id).then(todo => {
+        return res.status(200).send(todo);
+    }).catch(mess => {
+        return res.status(404).send(mess);
+    })
+});
+
+app.put("/todos/:id", (req, res) => {
+    const id = req.params.id;
+    const newTodo = { 
+        title: req.body.title,
+        completed: req.body.completed,
+        description: req.body.description
+    };
+    updateTodo(id, newTodo).then(mess => {
+        return res.status(200).send(mess)
+    }).catch(mess => {
+        return res.status(404).send(mess)
+    })
+});
+
+app.delete("/todos/:id", (req, res) => {
+    const id = req.params.id;
+    removeTodo(id).then(mess => {
+        return res.status(200).send(mess)
+    }).catch(mess => {
+        return res.status(404).send(mess)
+    })
+});
+
+app.post("/todos", (req, res) => {
+    const { title, completed, description } = req.body;
+    const todo = { title, completed, description, id: uuidv4() };
+    readFile().then(data => {
+        data.push(todo);
+        writeFile(data);
+        console.log(data);
+        return res.status(201).send({ id: todo.id });
+    })
+});
+
+//app.listen(PORT, () => {
+//    console.log(`App is listening on the port ${PORT}`);
+//});
 
 module.exports = app;
