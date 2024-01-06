@@ -43,10 +43,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
-// const PORT = 3000;
+const cors = require('cors')
+const PORT = 3000;
 
 const app = express();
 
+app.use(cors())
 app.use(bodyParser.json());
 
 const readFile = () => new Promise((resolve, reject) => {
@@ -170,8 +172,8 @@ app.post("/todos", (req, res) => {
     })
 });
 
-//app.listen(PORT, () => {
-//    console.log(`App is listening on the port ${PORT}`);
-//});
+app.listen(PORT, () => {
+    console.log(`App is listening on the port ${PORT}`);
+});
 
 module.exports = app;
